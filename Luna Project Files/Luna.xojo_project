@@ -6,6 +6,7 @@ Class=Luna;Luna.xojo_code;&h3D3A6FFF;&h0;false
 WebSession=Session;Session.xojo_code;&h18D0BE8B;&h0;false
 WebView=MainPage;MainPage.xojo_code;&h308DE60D;&h0;false
 BuildSteps=Build Automation;Build Automation.xojo_code;&h33FABA08;&h0;false
+Module=modConstants;modConstants.xojo_code;&h3CB0AFFF;&h0;false
 DefaultWindow=MainPage
 MajorVersion=1
 MinorVersion=0

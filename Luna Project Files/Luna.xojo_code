@@ -35,7 +35,7 @@ Protected Class Luna
 	#tag EndMethod
 
 	#tag Method, Flags = &h0
-		Sub Constructor(Request As WebRequest, SecureConnectionsRequired As Boolean, DatabaseHost As String, DatabaseUserName As String, DatabasePassword As String, DatabaseName As String)
+		Sub Constructor(Request As WebRequest, SecureConnectionsRequired As Boolean, DatabaseHost As String, DatabaseUserName As String, DatabasePassword As String, DatabaseName As String, Optional DatabaseSchema As String)
 		  // If this isn't a request for the root...
 		  If Request.Path = "" Then
 		    // Display the Luna launch page.
@@ -63,22 +63,45 @@ Protected Class Luna
 		    Return
 		  End If
 		  
-		  
 		  // Create and configure a database connection object.
-		  DatabaseConnection = New MySQLCommunityServer
-		  DatabaseConnection.Host = DatabaseHost
-		  DatabaseConnection.UserName = DatabaseUserName
-		  DatabaseConnection.Password = DatabasePassword
-		  DatabaseConnection.DatabaseName = DatabaseName
-		  
+		  #if UseMySQL and UsePostgreSQL
+		    #pragma Error "You need to set only one of the constants (UseMySQL or UsePostgreSQL) to True to be able to work"
+		  #elseif UseMySQL
+		    DatabaseConnection = New MySQLCommunityServer
+		    DatabaseConnection.Host = DatabaseHost
+		    DatabaseConnection.UserName = DatabaseUserName
+		    DatabaseConnection.Password = DatabasePassword
+		    DatabaseConnection.DatabaseName = DatabaseName
+		  #elseif UsePostgreSQL
+		    pgDatabaseConnection = New PostgreSQLDatabase
+		    pgDatabaseConnection.Host = DatabaseHost
+		    pgDatabaseConnection.UserName = DatabaseUserName
+		    pgDatabaseConnection.Password = DatabasePassword
+		    pgDatabaseConnection.DatabaseName = DatabaseName
+		  #Else
+		    #pragma Error "You need to set one of the constants (UseMySQL or UsePostgreSQL) to True to be able to work"
+		  #endif
 		  
 		  // If we cannot connect to the database...
-		  If not DatabaseConnection.Connect Then
-		    Request.Status = 500
-		    Request.Print( ErrorResponseCreate ( "500", "Unable to connect to the database.", "Database error code: " + DatabaseConnection.ErrorCode.ToText) )
-		    Return
-		  End If
+		  #if UseMySQL
+		    If not DatabaseConnection.Connect Then
+		      Request.Status = 500
+		      Request.Print( ErrorResponseCreate ( "500", "Unable to connect to the database.", "Database error code: " + DatabaseConnection.ErrorCode.ToText) )
+		      Return
+		    End If
+		  #elseif UsePostgreSQL
+		    If not pgDatabaseConnection.Connect Then
+		      Request.Status = 500
+		      Request.Print( ErrorResponseCreate ( "500", "Unable to connect to the database.", "Database error code: " + pgDatabaseConnection.ErrorCode.ToText) )
+		      Return
+		    End If
+		  #endif
 		  
+		  #if UsePostgreSQL
+		    if DatabaseSchema<>"" Then
+		      pgDatabaseConnection.SQLExecute("SET SEARCH_PATH=" + DatabaseSchema + ";")
+		    end if
+		  #endif
 		  
 		  // Get the JSON-encoded version of the request body.
 		  RequestJSON = New JSONItem(Request.Entity)
@@ -96,9 +119,6 @@ Protected Class Luna
 		  // Would result in an array with these elements...
 		  // [0] = v1, [1] = Contacts, [2] = 47B9FACA-4CAB-41B9-AF21-9ED4E4DD8372
 		  RequestPathComponents = split(Request.Path, "/")
-		  
-		  
-		  
 		  
 		  
 		End Sub
@@ -168,7 +188,7 @@ Protected Class Luna
 		  // Enables the caller to specify a list of columns to be returned.
 		  // The list is passed as a URL variable ("columns") with a list of columns names.
 		  // e.g. columns=Department_ID,Department_Name
-		  // If no solumn list is specified, then all columns are returned.
+		  // If no column list is specified, then all columns are returned.
 		  
 		  If not GET.HasKey("columns") Then
 		    
@@ -191,25 +211,54 @@ Protected Class Luna
 		  Dim Response As New Dictionary
 		  
 		  // Build the SELECT statement.
-		  sql = "SELECT " + PKColumn + " FROM " + Table + " WHERE " + PKColumn + " = ?"
+		  #if UseMySQL
+		    sql = "SELECT " + PKColumn + " FROM " + Table + " WHERE " + PKColumn + " = ?"
+		  #elseif UsePostgreSQL
+		    sql = "SELECT " + PKColumn + " FROM " + Table + " WHERE " + PKColumn + " = $1"
+		  #endif
 		  
 		  // Create the prepared statement.
-		  SQLStatement = DatabaseConnection.Prepare(sql)
+		  #if UseMySQL
+		    SQLStatement = DatabaseConnection.Prepare(sql)
+		  #elseif UsePostgreSQL
+		    pgSQLStatement = pgDatabaseConnection.Prepare(sql)
+		  #endif
 		  
 		  // Specify the binding types.
-		  SQLStatement.BindType(0, MySQLPreparedStatement.MYSQL_TYPE_STRING)
+		  #if UseMySQL
+		    SQLStatement.BindType(0, MySQLPreparedStatement.MYSQL_TYPE_STRING)
+		  #endif
 		  
 		  // Bind the values.
-		  SQLStatement.Bind(0, RequestPathComponents(2))
+		  #if UseMySQL
+		    SQLStatement.Bind(0, RequestPathComponents(2))
+		  #elseif UsePostgreSQL
+		    pgSQLStatement.Bind(0, RequestPathComponents(2))
+		  #endif
 		  
 		  // Send the request.
-		  Dim data As RecordSet = SQLStatement.SQLSelect
+		  Dim data As RecordSet
+		  #if UseMySQL
+		    data = SQLStatement.SQLSelect
+		  #elseif UsePostgreSQL
+		    data = pgSQLStatement.SQLSelect
+		  #endif
 		  
 		  // If an error was thrown...
-		  If DatabaseConnection.Error Then
+		  Dim bError As Boolean=False
+		  #if UseMySQL
+		    bError=DatabaseConnection.Error
+		  #elseif UsePostgreSQL
+		    bError=pgDatabaseConnection.Error
+		  #endif
+		  If bError Then
 		    
 		    Response.Value("ResponseStatus") = 500
-		    Response.Value("ResponseBody") = ErrorResponseCreate ( "500", "SQL INSERT Failure", "Database error code: " + DatabaseConnection.ErrorCode.ToText)
+		    #if UseMySQL
+		      Response.Value("ResponseBody") = ErrorResponseCreate ( "500", "SQL INSERT Failure", "Database error code: " + DatabaseConnection.ErrorCode.ToText)
+		    #elseif UsePostgreSQL
+		      Response.Value("ResponseBody") = ErrorResponseCreate ( "500", "SQL INSERT Failure", "Database error code: " + pgDatabaseConnection.ErrorCode.ToText)
+		    #endif
 		    Return Response
 		    
 		  End If
@@ -224,41 +273,86 @@ Protected Class Luna
 		  End If
 		  
 		  // Build the DELETE statement.
-		  sql = "DELETE FROM " + Table + " WHERE " + PKColumn + " = ?"
+		  #if UseMySQL
+		    sql = "DELETE FROM " + Table + " WHERE " + PKColumn + " = ?"
+		  #elseif UsePostgreSQL
+		    sql = "DELETE FROM " + Table + " WHERE " + PKColumn + " = $1"
+		  #endif
 		  
 		  // Create the prepared statement.
-		  SQLStatement = DatabaseConnection.Prepare(sql)
+		  #if UseMySQL
+		    SQLStatement = DatabaseConnection.Prepare(sql)
+		  #elseif UsePostgreSQL
+		    pgSQLStatement = pgDatabaseConnection.Prepare(sql)
+		  #endif
 		  
 		  // Specify the binding types.
-		  SQLStatement.BindType(0, MySQLPreparedStatement.MYSQL_TYPE_STRING)
+		  #if UseMySQL
+		    SQLStatement.BindType(0, MySQLPreparedStatement.MYSQL_TYPE_STRING)
+		  #endif
 		  
 		  // Bind the values.
-		  SQLStatement.Bind(0, RequestPathComponents(2))
+		  #if UseMySQL
+		    SQLStatement.Bind(0, RequestPathComponents(2))
+		  #elseif UsePostgreSQL
+		    pgSQLStatement.Bind(0, RequestPathComponents(2))
+		  #endif
 		  
 		  // Execute the statement.
-		  SQLStatement.SQLExecute
+		  #if UseMySQL
+		    SQLStatement.SQLExecute
+		  #elseif UsePostgreSQL
+		    pgSQLStatement.SQLExecute
+		  #endif
 		  
 		  // If an error was thrown...
-		  If DatabaseConnection.Error Then
+		  #if UseMySQL
+		    bError=DatabaseConnection.Error
+		  #elseif UsePostgreSQL
+		    bError=pgDatabaseConnection.Error
+		  #endif
+		  If bError Then
 		    Response.Value("ResponseStatus") = 500
-		    Response.Value("ResponseBody") = ErrorResponseCreate ( "500", "DELETE Request Failed", DatabaseConnection.ErrorMessage)
+		    #if UseMySQL
+		      Response.Value("ResponseBody") = ErrorResponseCreate ( "500", "DELETE Request Failed", DatabaseConnection.ErrorMessage)
+		    #elseif UsePostgreSQL
+		      Response.Value("ResponseBody") = ErrorResponseCreate ( "500", "DELETE Request Failed", pgDatabaseConnection.ErrorMessage)
+		    #endif
 		    Return Response
 		  End If
 		  
 		  // Build the SELECT statement.
-		  sql = "SELECT " + PKColumn + " FROM " + Table + " WHERE " + PKColumn + " = ?"
+		  #if UseMySQL
+		    sql = "SELECT " + PKColumn + " FROM " + Table + " WHERE " + PKColumn + " = ?"
+		  #elseif UsePostgreSQL
+		    sql = "SELECT " + PKColumn + " FROM k115." + Table + " WHERE " + PKColumn + " = $1"
+		  #endif
 		  
 		  // Create the prepared statement.
-		  SQLStatement = DatabaseConnection.Prepare(sql)
+		  #if UseMySQL
+		    SQLStatement = DatabaseConnection.Prepare(sql)
+		  #elseif UsePostgreSQL
+		    pgSQLStatement = pgDatabaseConnection.Prepare(sql)
+		  #endif
 		  
 		  // Specify the binding types.
-		  SQLStatement.BindType(0, MySQLPreparedStatement.MYSQL_TYPE_STRING)
+		  #if UseMySQL
+		    SQLStatement.BindType(0, MySQLPreparedStatement.MYSQL_TYPE_STRING)
+		  #endif
 		  
 		  // Bind the values.
-		  SQLStatement.Bind(0, RequestPathComponents(1))
+		  #if UseMySQL
+		    SQLStatement.Bind(0, RequestPathComponents(1))
+		  #elseif UsePostgreSQL
+		    pgSQLStatement.Bind(0, RequestPathComponents(1))
+		  #endif
 		  
 		  // Send the request.
-		  data =SQLStatement.SQLSelect
+		  #if UseMySQL
+		    data = SQLStatement.SQLSelect
+		  #elseif UsePostgreSQL
+		    data = pgSQLStatement.SQLSelect
+		  #endif
 		  
 		  // If there is no data to be returned...
 		  If data.EOF Then
@@ -275,11 +369,6 @@ Protected Class Luna
 		  End If
 		  
 		  
-		  
-		  
-		  
-		  
-		  
 		End Function
 	#tag EndMethod
 
@@ -291,13 +380,28 @@ Protected Class Luna
 		  Dim Records As New JSONItem
 		  
 		  // Send the request.
-		  Dim data As RecordSet = SQLStatement.SQLSelect
+		  Dim data As RecordSet
+		  #if UseMySQL
+		    data = SQLStatement.SQLSelect
+		  #elseif UsePostgreSQL
+		    data = pgSQLStatement.SQLSelect
+		  #endif
 		  
 		  // If an error was thrown...
-		  If DatabaseConnection.Error Then
+		  Dim bError As Boolean=False
+		  #if UseMySQL
+		    bError=DatabaseConnection.Error
+		  #elseif UsePostgreSQL
+		    bError=pgDatabaseConnection.Error
+		  #endif
+		  If bError Then
 		    
 		    Response.Value("ResponseStatus") = 500
-		    Response.Value("ResponseBody") = ErrorResponseCreate ( "500", "SQL SELECT Failure", "Database error code: " + self.DatabaseConnection.ErrorCode.ToText)
+		    #if UseMySQL
+		      Response.Value("ResponseBody") = ErrorResponseCreate ( "500", "SQL SELECT Failure", "Database error code: " + self.DatabaseConnection.ErrorCode.ToText)
+		    #elseif UsePostgreSQL
+		      Response.Value("ResponseBody") = ErrorResponseCreate ( "500", "SQL SELECT Failure", "Database error code: " + self.pgDatabaseConnection.ErrorCode.ToText)
+		    #endif
 		    Return Response
 		    
 		  End If
@@ -493,6 +597,14 @@ Protected Class Luna
 
 	#tag Property, Flags = &h0
 		LunaVersion As String = "2016.02.19"
+	#tag EndProperty
+
+	#tag Property, Flags = &h0
+		pgDatabaseConnection As PostgreSQLDatabase
+	#tag EndProperty
+
+	#tag Property, Flags = &h0
+		pgSQLStatement As PostgreSQLPreparedStatement
 	#tag EndProperty
 
 	#tag Property, Flags = &h0
