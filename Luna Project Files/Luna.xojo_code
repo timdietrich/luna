@@ -214,7 +214,7 @@ Protected Class Luna
 		  #if UseMySQL
 		    sql = "SELECT " + PKColumn + " FROM " + Table + " WHERE " + PKColumn + " = ?"
 		  #elseif UsePostgreSQL
-		    sql = "SELECT " + PKColumn + " FROM " + Table + " WHERE " + PKColumn + " = $1"
+		    sql = "SELECT " + Lowercase(PKColumn) + " FROM " + Lowercase(Table) + " WHERE " + Lowercase(PKColumn) + " = $1"
 		  #endif
 		  
 		  // Create the prepared statement.
@@ -276,7 +276,7 @@ Protected Class Luna
 		  #if UseMySQL
 		    sql = "DELETE FROM " + Table + " WHERE " + PKColumn + " = ?"
 		  #elseif UsePostgreSQL
-		    sql = "DELETE FROM " + Table + " WHERE " + PKColumn + " = $1"
+		    sql = "DELETE FROM " + Lowercase(Table) + " WHERE " + Lowercase(PKColumn) + " = $1"
 		  #endif
 		  
 		  // Create the prepared statement.
@@ -325,7 +325,7 @@ Protected Class Luna
 		  #if UseMySQL
 		    sql = "SELECT " + PKColumn + " FROM " + Table + " WHERE " + PKColumn + " = ?"
 		  #elseif UsePostgreSQL
-		    sql = "SELECT " + PKColumn + " FROM k115." + Table + " WHERE " + PKColumn + " = $1"
+		    sql = "SELECT " + Lowercase(PKColumn) + " FROM " + Lowercase(Table) + " WHERE " + Lowercase(PKColumn) + " = $1"
 		  #endif
 		  
 		  // Create the prepared statement.
@@ -582,6 +582,38 @@ Protected Class Luna
 		404 Not Found: Failure response because the requested resource is invalid.
 		
 		
+		
+		
+	#tag EndNote
+
+	#tag Note, Name = UsePostgreSQL
+		To use PostgreSQL instead of MySQL:
+		- set UseMySQL to False
+		- set UsePostgreSQL to True
+		- if you use a databaseschema in PostgreSQL set the value of DatabaseSchema
+		
+		You can then connect to a PostgreSQL database with Luna.
+		
+		When programming for PostgreSQL take the following differences compared to MySQL into account:
+		
+		1. PostgreSQL also has database schemas which are not synonymous to databases like they are in MySQL. 
+		   The schemas in PostgreSQL are collections within a database (containing tables, data types, functions, operators...). 
+		   That's the reason I added the optional Databaseschema to the Luna constructor. I made it optional because MySQL does not need it, 
+		   since in MySQL a schema is a database and that is already a parameter. 
+		   In PostgreSQL if no schema name is specified, the schema public will be used. This schema is made by default by PostgreSQL.
+		
+		2. PostgreSQL prepared statements use $ followed by a number for its parameters instead of ? (so for instance $2 is parameter 2)
+		
+		3. In PostgreSQL you don't need to bind the columns to a type
+		
+		4. The fieldnames are not capitalised after executing the creation script, which meant that since PostgreSQL is case-dependent 
+		   Luna couldn't find the fieldnames (for instance City isn't found because the script created city) 
+		   (to avoid confusion, I made a new creation script for PostgreSQL that only uses lower case fields, that way it's less confusing, 
+		   since the original script even if it contained City would create city in PostgreSQL)
+		
+		5. Postgresql has its own prepared statement in Xojo, so Luna uses pgSQLStatement instead of SQLStatement when using PostgreSQL.
+		
+		6. Postgresql is not a MySQLCommunityServer so Luna uses pgDatabaseConnection instead of DatabaseConnection when using PostgreSQL.
 		
 		
 	#tag EndNote

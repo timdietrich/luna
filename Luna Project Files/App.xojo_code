@@ -78,7 +78,7 @@ Inherits WebApplication
 		    #if UseMySQL
 		      APIRequest.SQLStatement = APIRequest.DatabaseConnection.Prepare("SELECT " + APIRequest.SQLColumnsPrepare + " FROM Contacts")
 		    #elseif UsePostgreSQL
-		      APIRequest.pgSQLStatement = APIRequest.pgDatabaseConnection.Prepare("SELECT " + APIRequest.SQLColumnsPrepare + " FROM Contacts")
+		      APIRequest.pgSQLStatement = APIRequest.pgDatabaseConnection.Prepare("SELECT " + APIRequest.SQLColumnsPrepare + " FROM contacts")
 		    #endif
 		  Else
 		    #if UseMySQL
@@ -86,7 +86,7 @@ Inherits WebApplication
 		      APIRequest.SQLStatement.BindType(0, MySQLPreparedStatement.MYSQL_TYPE_STRING)
 		      APIRequest.SQLStatement.Bind(0, APIRequest.RequestPathComponents(2))
 		    #elseif UsePostgreSQL
-		      APIRequest.pgSQLStatement = APIRequest.pgDatabaseConnection.Prepare("SELECT " + APIRequest.SQLColumnsPrepare + " FROM Contacts WHERE EmailAddress = $1")
+		      APIRequest.pgSQLStatement = APIRequest.pgDatabaseConnection.Prepare("SELECT " + APIRequest.SQLColumnsPrepare + " FROM contacts WHERE emailaddress = $1")
 		      APIRequest.pgSQLStatement.Bind(0, APIRequest.RequestPathComponents(2))
 		    #endif
 		  End If
@@ -107,7 +107,7 @@ Inherits WebApplication
 		    APIRequest.SQLStatement.BindType(0, MySQLPreparedStatement.MYSQL_TYPE_STRING)
 		    APIRequest.SQLStatement.Bind(0, APIRequest.RequestPathComponents(2))
 		  #elseif UsePostgreSQL
-		    APIRequest.pgSQLStatement = APIRequest.pgDatabaseConnection.Prepare("SELECT * FROM Contacts WHERE EmailAddress = $1")
+		    APIRequest.pgSQLStatement = APIRequest.pgDatabaseConnection.Prepare("SELECT * FROM contacts WHERE emailaddress = $1")
 		    APIRequest.pgSQLStatement.Bind(0, APIRequest.RequestPathComponents(2))
 		  #endif
 		  Response = APIRequest.SQLSELECTProcess
@@ -185,21 +185,21 @@ Inherits WebApplication
 		    + "WHERE " _
 		    + "EmailAddress = ?"
 		  #elseif UsePostgreSQL
-		    Dim sql As String = "UPDATE Contacts SET " _
-		    + "City = $1, " _
-		    + "Company = $2, " _
-		    + "Domain = $3, " _
-		    + "EmailAddress = $4, " _
-		    + "GivenName = $5, " _
-		    + "Occupation = $6, " _
-		    + "State = $7, " _
-		    + "StreetAddress = $8, " _
-		    + "Surname = $9, " _
-		    + "TelephoneNumber = $10, " _
-		    + "Title = $11, " _
-		    + "ZipCode = $12 " _
+		    Dim sql As String = "UPDATE contacts SET " _
+		    + "city = $1, " _
+		    + "company = $2, " _
+		    + "domain = $3, " _
+		    + "emailaddress = $4, " _
+		    + "givenname = $5, " _
+		    + "occupation = $6, " _
+		    + "state = $7, " _
+		    + "streetaddress = $8, " _
+		    + "surname = $9, " _
+		    + "telephonenumber = $10, " _
+		    + "title = $11, " _
+		    + "zipcode = $12 " _
 		    + "WHERE " _
-		    + "EmailAddress = $13"
+		    + "emailaddress = $13"
 		  #endif
 		  
 		  
@@ -294,7 +294,7 @@ Inherits WebApplication
 		    APIRequest.SQLStatement.BindType(0, MySQLPreparedStatement.MYSQL_TYPE_STRING)
 		    APIRequest.SQLStatement.Bind(0, APIRequest.RequestJSON.Value("EmailAddress"))
 		  #elseif UsePostgreSQL
-		    sql = "SELECT * FROM Contacts WHERE EmailAddress = $1"
+		    sql = "SELECT * FROM contacts WHERE emailaddress = $1"
 		    APIRequest.pgSQLStatement = APIRequest.pgDatabaseConnection.Prepare(sql)
 		    APIRequest.pgSQLStatement.Bind(0, APIRequest.RequestJSON.Value("EmailAddress"))
 		  #endif
@@ -326,8 +326,8 @@ Inherits WebApplication
 		    + "( City, Company, Domain, EmailAddress, GivenName, Occupation, State, StreetAddress, Surname, TelephoneNumber, Title, ZipCode) " _
 		    + "VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )"
 		  #elseif UsePostgreSQL
-		    Dim sql As String = "INSERT INTO Contacts " _
-		    + "( City, Company, Domain, EmailAddress, GivenName, Occupation, State, StreetAddress, Surname, TelephoneNumber, Title, ZipCode) " _
+		    Dim sql As String = "INSERT INTO contacts " _
+		    + "( city, company, domain, emailaddress, givenname, occupation, state, streetaddress, surname, telephonenumber, title, zipcode) " _
 		    + "VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12 )"
 		  #endif
 		  
@@ -419,7 +419,7 @@ Inherits WebApplication
 		    APIRequest.SQLStatement.BindType(0, MySQLPreparedStatement.MYSQL_TYPE_STRING)
 		    APIRequest.SQLStatement.Bind(0, APIRequest.RequestJSON.Value("EmailAddress"))
 		  #elseif UsePostgreSQL
-		    sql = "SELECT * FROM Contacts WHERE EmailAddress = $1"
+		    sql = "SELECT * FROM contacts WHERE emailaddress = $1"
 		    APIRequest.pgSQLStatement = APIRequest.pgDatabaseConnection.Prepare(sql)
 		    APIRequest.pgSQLStatement.Bind(0, APIRequest.RequestJSON.Value("EmailAddress"))
 		  #endif
@@ -458,7 +458,7 @@ Inherits WebApplication
 		    APIRequest.SQLStatement.BindType(0, MySQLPreparedStatement.MYSQL_TYPE_STRING)
 		    APIRequest.SQLStatement.Bind(0, APIRequest.RequestPathComponents(2))
 		  #elseif UsePostgreSQL
-		    APIRequest.pgSQLStatement = APIRequest.pgDatabaseConnection.Prepare("SELECT * FROM Contacts WHERE EmailAddress = $1")
+		    APIRequest.pgSQLStatement = APIRequest.pgDatabaseConnection.Prepare("SELECT * FROM contacts WHERE emailaddress = $1")
 		    APIRequest.pgSQLStatement.Bind(0, APIRequest.RequestPathComponents(2))
 		  #endif
 		  Response = APIRequest.SQLSELECTProcess
@@ -488,21 +488,21 @@ Inherits WebApplication
 		    + "WHERE " _
 		    + "EmailAddress = ?"
 		  #elseif UsePostgreSQL
-		    sql = "UPDATE Contacts SET " _
-		    + "City = $1, " _
-		    + "Company = $2, " _
-		    + "Domain = $3, " _
-		    + "EmailAddress = $4, " _
-		    + "GivenName = $5, " _
-		    + "Occupation = $6, " _
-		    + "State = $7, " _
-		    + "StreetAddress = $8, " _
-		    + "Surname = $9, " _
-		    + "TelephoneNumber = $10, " _
-		    + "Title = $11, " _
-		    + "ZipCode = $12 " _
+		    sql = "UPDATE contacts SET " _
+		    + "city = $1, " _
+		    + "company = $2, " _
+		    + "domain = $3, " _
+		    + "emailaddress = $4, " _
+		    + "givenname = $5, " _
+		    + "occupation = $6, " _
+		    + "state = $7, " _
+		    + "streetaddress = $8, " _
+		    + "surname = $9, " _
+		    + "telephonenumber = $10, " _
+		    + "title = $11, " _
+		    + "zipcode = $12 " _
 		    + "WHERE " _
-		    + "EmailAddress = $13"
+		    + "emailaddress = $13"
 		  #endif
 		  
 		  // Create the prepared statement.
@@ -595,7 +595,7 @@ Inherits WebApplication
 		    APIRequest.SQLStatement.BindType(0, MySQLPreparedStatement.MYSQL_TYPE_STRING)
 		    APIRequest.SQLStatement.Bind(0, APIRequest.RequestJSON.Value("EmailAddress"))
 		  #elseif UsePostgreSQL
-		    sql = "SELECT * FROM Contacts WHERE EmailAddress = $1"
+		    sql = "SELECT * FROM contacts WHERE emailaddress = $1"
 		    APIRequest.pgSQLStatement = APIRequest.pgDatabaseConnection.Prepare(sql)
 		    APIRequest.pgSQLStatement.Bind(0, APIRequest.RequestJSON.Value("EmailAddress"))
 		  #endif
