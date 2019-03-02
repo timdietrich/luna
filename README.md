@@ -1,3 +1,10 @@
+# Please Note
+
+Luna has been replaced by Luna Express, which is an add-on to [Aloe Express](https://aloe.zone).
+
+To download Luna Express, please visit [https://aloe.zone/resources/downloads.html](https://aloe.zone/resources/downloads.html) and select the "Add-Ons" tab.
+
+
 About Luna
 ==========
 
